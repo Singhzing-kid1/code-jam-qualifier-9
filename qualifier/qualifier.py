@@ -11,7 +11,7 @@ class Request:
 
 
 class RestaurantManager:
-    def __init__(self):
+    def __init__(self,):
         """Instantiate the restaurant manager.
 
         This is called at the start of each day before any staff get on
@@ -19,6 +19,7 @@ class RestaurantManager:
         to get the system working before the day starts here; we have
         already defined a staff dictionary.
         """
+
         self.staff = {}
 
     async def __call__(self, request: Request):
@@ -31,4 +32,17 @@ class RestaurantManager:
             Request object containing information about the sent
             request to your application.
         """
-        ...
+
+        if request.scope["type"] == "staff.onduty": self.staff[request.scope["id"]] = request
+        if request.scope["type"] == "staff.offduty": del self.staff[request.scope["id"]]
+        if request.scope["type"] == "order":
+            for a in self.staff:
+                for b in self.staff[a].scope["speciality"]:
+                    if b == request.scope["speciality"]: specialOrderId = a
+
+            found = self.staff[specialOrderId]
+            full_order = await request.receive()
+            await found.send(full_order)
+
+            result = await found.receive()
+            await request.send(result)
